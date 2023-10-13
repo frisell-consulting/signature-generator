@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Signature generator</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+	<style>
+		iframe#signaturePreview {
+			width: 100%;
+			min-height: 180px;
+			margin: auto auto;
+		}
+
+		textarea#signatureHtml {
+			width: 100%;
+			min-height: 250px;
+			font-size: 10px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container py-5">
+		<div class="row">
+			<div class="col-md-6 mx-auto">
+				<div class="card border-0 shadow-sm">
+					<div class="card-header border-0 bg-light">
+						<h5 class="my-2">Signature generator</h5>
+					</div>
+					<div class="card-body p-4">
+						<form>
+							<div class="row">
+								<div class="mb-3 col-md-12">
+									<label for="profile" class="form-label">Profiles</label>
+									<select class="form-select" id="profile" name="profile">
+										<option selected></option>
+										<option value="1">Jonas Frisell</option>
+										<option value="2">Eric Frisell</option>
+									</select>
+								</div>
+								<div class="mb-3 col-md-12">
+									<label for="name" class="form-label">Name</label>
+									<input type="text" class="form-control" id="name" name="name" />
+								</div>
+								<div class="mb-3 col-md-12">
+									<label for="title" class="form-label">Title</label>
+									<input type="text" class="form-control" id="title" name="title" />
+								</div>
+								<div class="mb-3 col-md-12">
+									<label for="phone" class="form-label">Phone number</label>
+									<input type="text" class="form-control" id="phone" name="phone" aria-describedby="phone-help" />
+									<div id="phone-help" class="form-text">Example: +46 (0)73 730 09 24</div>
+								</div>
+								<div class="mb-3 col-md-12">
+									<label for="profilepic" class="form-label">Profile picture URL</label>
+									<input type="text" class="form-control" id="profilepic" name="profilepic"
+										aria-describedby="profilepic-help" />
+									<div id="profilepic-help" class="form-text">Upload to imgur.com</div>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-6 mx-auto mt-5">
+				<div class="card border-0 shadow-sm">
+					<div class="card-header border-0 bg-light">
+						<h5 class="my-2">Signature preview</h5>
+					</div>
+					<div class="card-body p-4">
+						<iframe id="signaturePreview" frameborder="0"></iframe>
+						<hr>
+						<h6>HTML code:</h6>
+						<textarea id="signatureHtml" class="border-0 rounded-2 bg-light" readonly></textarea>
+						<button type="button" id="copySignatureHtml" class="btn btn-primary btn-block w-100">Copy to
+							clipboard</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3"
+		crossorigin="anonymous"></script>
+	<script src="https://code.jquery.com/jquery-3.6.1.min.js"
+		integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<script>
+		const Toast = Swal.mixin({
+			toast: true,
+			position: 'top-end',
+			showConfirmButton: false,
+			timer: 2000,
+			timerProgressBar: true,
+			didOpen: (toast) => {
+				toast.addEventListener('mouseenter', Swal.stopTimer)
+				toast.addEventListener('mouseleave', Swal.resumeTimer)
+			}
+		})
+
+		$(document).ready(function () {
+			updateSignature();
+		});
+
+		$('#profile').on('change', function () {
+			console.log("now");
+			/* $.getJSON('profiles.json', function (profiles) {
+				$.each(profiles, function (i, p) {
+					console.log(i)
+					console.log(p)
+				})
+			}); */
+			$.getJSON("profiles.json", function (json) {
+				console.log(json); // this will show the info it in firebug console
+			});
+		});
+
+		$('input').on('change', function () {
+			updateSignature()
+		})
+
+		$('#copySignatureHtml').on('click', function () {
+			let textarea = document.getElementById("signatureHtml");
+			textarea.select();
+			document.execCommand("copy");
+			Toast.fire({
+				icon: 'success',
+				title: 'Copied to clipboard'
+			})
+		})
+
+		function updateSignature() {
+			const name = $('input[name="name"]').val();
+			const title = $('input[name="title"]').val();
+			const phone = $('input[name="phone"]').val();
+			//const phone = '+46 (0)73 730 09 24';
+			const profilepic = $('input[name="profilepic"]').val() ? $('input[name="profilepic"]').val() : 'https://i.imgur.com/UzK2YCx.png';
+			const phone_clean = phone ? phone.replace(/^\+/m, '00').replace(/\s+/g, '').replace(/\(0\)/m, '') : '';
+
+			let sigIframe = document.getElementById('signaturePreview');
+			let sigHtml = `
+<!DOCTYPE html>
+<html lang="en">
+	<body>
+		<table style="font-family:'Lato', 'Montserrat', 'Open Sans', 'Nunito', 'Rubik', 'Arial', sans-serif;">
+			<tr>
+				<td style="font-weight:600;font-size:1rem;"> Best regards,</td>
+			</tr>
+			<tr>
+				<td>
+					<table style="color:#333;">
+						<tr>
+							<td style="vertical-align:top;">
+								<table>
+									<tr style="text-align:center;padding:0;vertical-align:top;">
+										<td><img src="${profilepic}" style="width:100px;" width="100"/></td>
+									</tr>
+									<tr>
+										<td style="text-align:center;padding:0;vertical-align:top;">
+											<a href="https://frisell.io/" target="_blank"><img src="https://i.imgur.com/0M8WLZ3.png"
+												style="vertical-align:middle;width:22px;margin-right:3px;" width="22"></a>
+											<a href="https://www.linkedin.com/company/frisell/" target="_blank"><img
+												src="https://i.imgur.com/Kb2zqjN.png" style="vertical-align:middle;width:22px;" width="22"></a>
+										</td>
+									</tr>
+								</table>
+							</td>
+							<td style="padding-left:15px;vertical-align:top;">
+								<p style="font-size:1.2rem;font-weight:600;margin:0 0 4px 0;color:#222;">${name}</p>
+								<p style="font-size:1rem;font-weight:400;margin:3px 0;"><img src="https://i.imgur.com/HmhQOSt.png"
+										style="vertical-align:middle;margin-right:6px;width:20px;" width="20" /><span style="vertical-align:middle;">${title}</span></p>
+								<p style="font-size:1rem;font-weight:400;margin:3px 0;"><img src="https://i.imgur.com/kIHq82e.png"
+										style="vertical-align:middle;margin-right:6px;width:20px;" width="20"/><span
+										style="vertical-align:middle;">Frisell Consulting</span></p>
+								<a href="tel:${phone_clean}" style="font-size:1rem;margin:3px 0;color:#01aa93;"><img
+										src="https://i.imgur.com/Q5lHF5F.png" style="vertical-align:middle;margin-right:6px;width:20px;" width="20" /><span
+										style="vertical-align:middle;">${phone}</span></a>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+	</body>
+</html>`;
+			$('#signatureHtml').val(sigHtml);
+			sigIframe.src = "data:text/html;charset=utf-8," + escape(sigHtml);
+		}
+
+	</script>
+</body>
+
+</html>
+
+
+<!-- SIGNATURE DESIGN -->
+<div style="display: none;">
+	<table style="font-family:'Lato', 'Montserrat', 'Open Sans', 'Nunito', 'Rubik', 'Arial', sans-serif;">
+		<tr>
+			<td style="font-weight:600;color:#333;"> Best regards,</td>
+		</tr>
+		<tr>
+			<td>
+				<table style="color:#333;">
+					<tr>
+						<td><img src="https://i.imgur.com/BBPiv2g.png" style="width:100px;" /></td>
+						<td style="padding-left:15px;">
+							<p style="font-size:1.2rem;font-weight:600;margin:0 0 2px 0;color:#222;">Jonas Frisell</p>
+							<p style="font-size:1rem;font-weight:400;margin:1px 0;"><img src="https://i.imgur.com/HmhQOSt.png"
+									style="vertical-align:middle;margin-right:6px;width:20px;" /><span style="vertical-align:middle;">CEO
+									& Co-Founder</span></p>
+							<p style="font-size:1rem;font-weight:400;margin:1px 0;"><img src="https://i.imgur.com/kIHq82e.png"
+									style="vertical-align:middle;margin-right:6px;width:20px;" /><span
+									style="vertical-align:middle;">Frisell Consulting</span></p>
+							<a href="tel:0046737300924" style="font-size:1rem;margin:1px 0;color:#01aa93;"><img
+									src="https://i.imgur.com/Q5lHF5F.png"
+									style="vertical-align:middle;margin-right:6px;width:20px;" /><span style="vertical-align:middle;">+46
+									(0)73 730 09 24</span></a>
+						</td>
+					</tr>
+					<tr>
+						<td style="padding:0;">
+							<p style="text-align:center;margin:-8px 0 0 0;">
+								<a href="https://frisell.io/" target="_blank"><img src="https://i.imgur.com/0M8WLZ3.png"
+										style="vertical-align:middle;width:20px;"></a>
+								<a href="https://www.linkedin.com/company/frisell/" target="_blank"><img
+										src="https://i.imgur.com/Kb2zqjN.png" style="vertical-align:middle;width:20px;"></a>
+							</p>
+						</td>
+					</tr>
+				</table>
+			</td>
+			</td>
+	</table>
+</div>
